@@ -57,6 +57,7 @@ import org.telegram.ui.Cells.LoadingCell;
 import org.telegram.ui.Cells.RadioButtonCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextBlockCell;
+import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.EditTextEmoji;
@@ -115,6 +116,11 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
     private boolean loadingInvite;
     private TLRPC.TL_chatInviteExported invite;
 
+    private LinearLayout linearLayoutSavingContainer;
+    private HeaderCell savingHeaderCell;
+    private TextCheckCell savingTextCheckCell;
+    private TextInfoPrivacyCell savingInfoCell;
+
     private boolean loadingAdminedChannels;
     private TextInfoPrivacyCell adminedInfoCell;
     private ArrayList<AdminedChannelCell> adminedChannelCells = new ArrayList<>();
@@ -130,6 +136,8 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
 
     private boolean createAfterUpload;
     private boolean donePressed;
+
+    private boolean isNoForward;
 
     private final static int done_button = 1;
 
@@ -303,6 +311,9 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
                                     MessagesController.getInstance(currentAccount).updateChannelUserName(chatId, lastCheckName);
                                 }
                             }
+                        }
+                        else {
+                            MessagesController.getInstance(currentAccount).updateChannelForwardingRestriction(chatId, isNoForward);
                         }
                         Bundle args = new Bundle();
                         args.putInt("step", 2);
@@ -738,6 +749,30 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
             typeInfoCell.setBackgroundDrawable(Theme.getThemedDrawable(context, R.drawable.greydivider_bottom, Theme.key_windowBackgroundGrayShadow));
             linearLayout.addView(typeInfoCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
+            linearLayoutSavingContainer = new LinearLayout(context);
+            linearLayoutSavingContainer.setOrientation(LinearLayout.VERTICAL);
+            linearLayoutSavingContainer.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            linearLayout.addView(linearLayoutSavingContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            savingHeaderCell = new HeaderCell(context, 23);
+            savingHeaderCell.setText(LocaleController.getString("SavingContent", R.string.SavingContent));
+            linearLayoutSavingContainer.addView(savingHeaderCell);
+
+            savingTextCheckCell = new TextCheckCell(context, 23);
+            savingTextCheckCell.setBackground(Theme.getSelectorDrawable(true));
+            savingTextCheckCell.setTextAndCheck(LocaleController.getString("ChannelRestrictionsSavingContent", R.string.ChannelRestrictionsSavingContent), isNoForward, false);
+            linearLayoutSavingContainer.addView(savingTextCheckCell);
+            savingTextCheckCell.setOnClickListener(v -> {
+                isNoForward = !isNoForward;
+                savingTextCheckCell.setChecked(isNoForward);
+            });
+
+            savingInfoCell = new TextInfoPrivacyCell(context);
+            savingInfoCell.setTag(Theme.key_windowBackgroundWhiteGrayText4);
+            savingInfoCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText4));
+            savingInfoCell.setBackground(Theme.getThemedDrawable(savingInfoCell.getContext(), R.drawable.greydivider, Theme.key_windowBackgroundGrayShadow));
+            linearLayout.addView(savingInfoCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
             loadingAdminedCell = new LoadingCell(context);
             linearLayout.addView(loadingAdminedCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
@@ -787,6 +822,10 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
         if (sectionCell == null) {
             return;
         }
+
+        linearLayoutSavingContainer.setVisibility(View.GONE);
+        savingInfoCell.setVisibility(View.GONE);
+
         if (!isPrivate && !canCreatePublic) {
             typeInfoCell.setText(LocaleController.getString("ChangePublicLimitReached", R.string.ChangePublicLimitReached));
             typeInfoCell.setTag(Theme.key_windowBackgroundWhiteRedText4);
@@ -820,6 +859,11 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
             linkContainer.setPadding(0, 0, 0, isPrivate ? 0 : AndroidUtilities.dp(7));
             permanentLinkView.setLink(invite != null ? invite.link : null);
             checkTextView.setVisibility(!isPrivate && checkTextView.length() != 0 ? View.VISIBLE : View.GONE);
+            if (isPrivate) {
+                linearLayoutSavingContainer.setVisibility(View.VISIBLE);
+                savingInfoCell.setVisibility(View.VISIBLE);
+                savingInfoCell.setText(LocaleController.getString("ChannelSavingContentHelp", R.string.ChannelSavingContentHelp));
+            }
         }
         radioButtonCell1.setChecked(!isPrivate, true);
         radioButtonCell2.setChecked(isPrivate, true);
@@ -1229,6 +1273,17 @@ public class ChannelCreateActivity extends BaseFragment implements NotificationC
         themeDescriptions.add(new ThemeDescription(typeInfoCell, ThemeDescription.FLAG_BACKGROUNDFILTER, new Class[]{TextInfoPrivacyCell.class}, null, null, null, Theme.key_windowBackgroundGrayShadow));
         themeDescriptions.add(new ThemeDescription(typeInfoCell, ThemeDescription.FLAG_CHECKTAG, new Class[]{TextInfoPrivacyCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayText4));
         themeDescriptions.add(new ThemeDescription(typeInfoCell, ThemeDescription.FLAG_CHECKTAG, new Class[]{TextInfoPrivacyCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteRedText4));
+
+        themeDescriptions.add(new ThemeDescription(linearLayoutSavingContainer, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));
+        themeDescriptions.add(new ThemeDescription(savingHeaderCell, 0, new Class[]{HeaderCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlueHeader));
+
+        themeDescriptions.add(new ThemeDescription(savingTextCheckCell, 0, new Class[]{TextCheckCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteBlackText));
+        themeDescriptions.add(new ThemeDescription(savingTextCheckCell, 0, new Class[]{TextCheckCell.class}, new String[]{"valueTextView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayText2));
+        themeDescriptions.add(new ThemeDescription(savingTextCheckCell, 0, new Class[]{TextCheckCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_switchTrack));
+        themeDescriptions.add(new ThemeDescription(savingTextCheckCell, 0, new Class[]{TextCheckCell.class}, new String[]{"checkBox"}, null, null, null, Theme.key_switchTrackChecked));
+
+        themeDescriptions.add(new ThemeDescription(savingInfoCell, ThemeDescription.FLAG_BACKGROUNDFILTER, new Class[]{TextInfoPrivacyCell.class}, null, null, null, Theme.key_windowBackgroundGrayShadow));
+        themeDescriptions.add(new ThemeDescription(savingInfoCell, ThemeDescription.FLAG_CHECKTAG, new Class[]{TextInfoPrivacyCell.class}, new String[]{"textView"}, null, null, null, Theme.key_windowBackgroundWhiteGrayText4));
 
         themeDescriptions.add(new ThemeDescription(adminedInfoCell, ThemeDescription.FLAG_BACKGROUNDFILTER, new Class[]{TextInfoPrivacyCell.class}, null, null, null, Theme.key_windowBackgroundGrayShadow));
         themeDescriptions.add(new ThemeDescription(adminnedChannelsLayout, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundWhite));

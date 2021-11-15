@@ -374,6 +374,14 @@
     <string name="ChannelUsernamePlaceholder">link</string>
     <string name="ChannelPrivateLinkHelp">People can join your channel by following this link. You can revoke the link any time.</string>
     <string name="MegaPrivateLinkHelp">People can join your group by following this link. You can revoke the link any time.</string>
+    <string name="SavingContent">Saving content</string>
+    <string name="ChannelRestrictionsSavingContent">Restrict saving content</string>
+    <string name="ChannelSavingContentHelp">Participants won\'t be able to forward messages from this channel or save media files.</string>
+    <string name="MegaSavingContentHelp">Participants won\'t be able to forward messages from this group or save media files.</string>
+    <string name="ChannelForwardRestricted">Forwards from this channel are restricted.</string>
+    <string name="MegaForwardRestricted">Forwards from this group are restricted.</string>
+    <string name="ChannelForwardRestrictedHint">Forwards from this channel are restricted</string>
+    <string name="MegaForwardRestrictedHint">Forwards from this group are restricted</string>
     <string name="DescriptionOptionalPlaceholder">Description (optional)</string>
     <string name="DescriptionPlaceholder">Description</string>
     <string name="DescriptionInfo">You can provide an optional description for your channel.</string>
@@ -778,6 +786,8 @@
     <string name="EventLogToggledInvitesOff">un1 disabled group invites</string>
     <string name="EventLogToggledSignaturesOn">un1 enabled signatures</string>
     <string name="EventLogToggledSignaturesOff">un1 disabled signatures</string>
+    <string name="EventLogToggledNoForwardsOn">un1 enabled forwarding messages and saving media files</string>
+    <string name="EventLogToggledNoForwardsOff">un1 disabled forwarding messages and saving media files</string>
     <string name="EventLogRestrictedUntil">changed permissions for %1$s\n\nDuration: %2$s</string>
     <string name="EventLogDefaultPermissions">changed default permissions</string>
     <string name="EventLogRestrictedSendStickers">Send stickers &amp; GIFs</string>

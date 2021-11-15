@@ -7581,7 +7581,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     videoPlayerControlFrameLayout.setAlpha(alpha);
                     dateTextView.setAlpha(1f - alpha);
                     nameTextView.setAlpha(1f - alpha);
-                    if (shareWasAllowed) {
+                    if (shareWasAllowed || videoPlayerControlFrameLayout.getAlpha() != 0f) {
                         bottomButtonsLayout.setAlpha(1f - alpha);
                     }
                 });
@@ -7593,7 +7593,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         } else {
                             dateTextView.setVisibility(View.GONE);
                             nameTextView.setVisibility(View.GONE);
-                            if (shareWasAllowed) {
+                            if (shareWasAllowed || videoPlayerControlFrameLayout.getVisibility() == View.VISIBLE) {
                                 bottomButtonsLayout.setVisibility(View.GONE);
                             }
                         }
@@ -9751,6 +9751,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         if (messageObject != null) {
             SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("playback_speed", Activity.MODE_PRIVATE);
             currentVideoSpeed = preferences.getFloat("speed" + messageObject.getDialogId() + "_" + messageObject.getId(), 1.0f);
+            shareButton.setVisibility(messageObject.canForwardMessage(null) ? View.VISIBLE : View.GONE);
         } else {
             currentVideoSpeed = 1.0f;
         }
@@ -9807,7 +9808,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     needSearchImageInArr = false;
                 } else if (currentAnimation != null) {
                     needSearchImageInArr = false;
-                    if (messageObject.canForwardMessage()) {
+                    if (messageObject.canForwardMessage(null)) {
                         setItemVisible(sendItem, true, false);
                     }
                 } else if (!messageObject.scheduled && !(messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaInvoice) && !(messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaWebPage) && (messageObject.messageOwner.action == null || messageObject.messageOwner.action instanceof TLRPC.TL_messageActionEmpty)) {
@@ -9817,8 +9818,10 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         menuItem.showSubItem(gallery_menu_showinchat);
                         menuItem.showSubItem(gallery_menu_showall);
                     }
-                    setItemVisible(sendItem, true, false);
-                } else if (isEmbedVideo && messageObject.eventId == 0) {
+                    if (messageObject.canForwardMessage(null)) {
+                        setItemVisible(sendItem, true, false);
+                    }
+                } else if (isEmbedVideo && messageObject.eventId == 0 && messageObject.canForwardMessage(null)) {
                     setItemVisible(sendItem, true, false);
                 }
                 setImageIndex(0);
@@ -9867,7 +9870,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 opennedFromMedia = true;
                 startOffset = object.starOffset;
                 menuItem.showSubItem(gallery_menu_showinchat);
-                if (openingObject.canForwardMessage()) {
+                if (openingObject.canForwardMessage(null)) {
                     setItemVisible(sendItem, true, false);
                 }
                 if (openingObject.canPreviewDocument()) {
@@ -10153,7 +10156,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 if (!newMessageObject.canDeleteMessage(parentChatActivity != null && parentChatActivity.isInScheduleMode(), null)) {
                     menuItem.hideSubItem(gallery_menu_delete);
                 }
-                allowShare = true;
+                allowShare = newMessageObject.canForwardMessage(null);
                 bottomButtonsLayout.setVisibility(View.VISIBLE);
                 paintButton.setVisibility(View.GONE);
                 actionBar.setTitle(LocaleController.getString("AttachGif", R.string.AttachGif));
@@ -10235,14 +10238,14 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     bottomButtonsLayout.setVisibility(View.GONE);
                     menuItem.hideSubItem(gallery_menu_share);
                 } else {
-                    allowShare = true;
+                    allowShare = newMessageObject.canForwardMessage(null);
                     menuItem.showSubItem(gallery_menu_save);
                     boolean canPaint = newMessageObject.getDocument() == null || newMessageObject.canPreviewDocument() || newMessageObject.getMimeType().startsWith("video/");
                     paintButton.setVisibility(canPaint && canSendMediaToParentChatActivity() ? View.VISIBLE : View.GONE);
                     bottomButtonsLayout.setVisibility(!videoPlayerControlVisible ? View.VISIBLE : View.GONE);
                     if (bottomButtonsLayout.getVisibility() == View.VISIBLE) {
                         menuItem.hideSubItem(gallery_menu_share);
-                    } else {
+                    } else if (allowShare) {
                         menuItem.showSubItem(gallery_menu_share);
                     }
                 }
@@ -10520,8 +10523,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             }
             bottomLayout.setTag(null);
 
-            allowShare = true;
-            shareItem.setVisibility(View.VISIBLE);
+            allowShare = newMessageObject.canForwardMessage(null);
 
             if (currentAnimation != null) {
                 menuItem.setVisibility(View.VISIBLE);
@@ -10545,6 +10547,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             groupedPhotosListView.fillList();
             pageBlocksAdapter.updateSlideshowCell(pageBlock);
         }
+
+        if (newMessageObject != null && !newMessageObject.canForwardMessage(null)){
+            menuItem.hideSubItem(gallery_menu_openin);
+            menuItem.hideSubItem(gallery_menu_save);
+            menuItem.hideSubItem(gallery_menu_savegif);
+        }
+
+        shareItem.setVisibility(allowShare ? View.VISIBLE : View.GONE);
+
         setCurrentCaption(newMessageObject, caption, animateCaption);
     }
 
@@ -11992,7 +12003,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             } else {
                 windowLayoutParams.flags = WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
             }
-            if (chatActivity != null && chatActivity.getCurrentEncryptedChat() != null) {
+            if (chatActivity != null && (chatActivity.getCurrentEncryptedChat() != null || (chatActivity.currentChat != null && ChatObject.isChannel(chatActivity.currentChat) && chatActivity.currentChat.noforwards))) {
                 windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
             } else {
                 windowLayoutParams.flags &=~ WindowManager.LayoutParams.FLAG_SECURE;

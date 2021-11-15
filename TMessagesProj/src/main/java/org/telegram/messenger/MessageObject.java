@@ -1529,6 +1529,12 @@ public class MessageObject {
             } else {
                 messageText = replaceWithLink(LocaleController.getString("EventLogToggledSignaturesOff", R.string.EventLogToggledSignaturesOff), "un1", fromUser);
             }
+        } else if (event.action instanceof TLRPC.TL_channelAdminLogEventActionToggleNoForwards) {
+            if (((TLRPC.TL_channelAdminLogEventActionToggleNoForwards) event.action).new_value) {
+                messageText = replaceWithLink(LocaleController.getString("EventLogToggledNoForwardsOn", R.string.EventLogToggledNoForwardsOn), "un1", fromUser);
+            } else {
+                messageText = replaceWithLink(LocaleController.getString("EventLogToggledNoForwardsOff", R.string.EventLogToggledNoForwardsOff), "un1", fromUser);
+            }
         } else if (event.action instanceof TLRPC.TL_channelAdminLogEventActionToggleInvites) {
             if (((TLRPC.TL_channelAdminLogEventActionToggleInvites) event.action).new_value) {
                 messageText = replaceWithLink(LocaleController.getString("EventLogToggledInvitesOn", R.string.EventLogToggledInvitesOn), "un1", fromUser);
@@ -4220,8 +4226,13 @@ public class MessageObject {
             if (isSupergroup()) {
                 return false;
             }
-            if (messageOwner.peer_id.channel_id != 0 && (messageOwner.via_bot_id == 0 && messageOwner.reply_to == null || type != TYPE_STICKER && type != TYPE_ANIMATED_STICKER)) {
-                return true;
+            if (messageOwner.peer_id.channel_id != 0) {
+                TLRPC.Chat chat = getChat(null, null, messageOwner.peer_id.channel_id);
+                if (ChatObject.isChannelOrGiga(chat) && chat.noforwards) {
+                    return false;
+                } else if (messageOwner.via_bot_id == 0 && messageOwner.reply_to == null || type != TYPE_STICKER && type != TYPE_ANIMATED_STICKER) {
+                    return true;
+                }
             }
         }
         return false;
@@ -5678,8 +5689,41 @@ public class MessageObject {
         return canEditMessageScheduleTime(currentAccount, messageOwner, chat);
     }
 
-    public boolean canForwardMessage() {
-        return !(messageOwner instanceof TLRPC.TL_message_secret) && !needDrawBluredPreview() && !isLiveLocation() && type != 16 && !isSponsored();
+    public boolean canForwardMessage(TLRPC.Chat chat) {
+        return canForwardMessageAndSaveAsMedia(currentAccount, messageOwner, chat);
+    }
+
+    public boolean canCopyMessage(TLRPC.Chat chat) {
+        return canForwardMessageAndSaveAsMedia(currentAccount, messageOwner, chat);
+    }
+
+    public boolean canSaveAsMediaFile(TLRPC.Chat chat) {
+        return canForwardMessageAndSaveAsMedia(currentAccount, messageOwner, chat);
+    }
+
+    public boolean canSaveAsMusic(TLRPC.Chat chat) {
+        return isMusic() && canSaveAsMediaFile(chat);
+    }
+
+    public boolean canSaveAsDocument(TLRPC.Chat chat) {
+        return isDocument() && canSaveAsMediaFile(chat);
+    }
+
+    public boolean canSaveAsGIF(TLRPC.Chat chat) {
+        return isGif() && canSaveAsMediaFile(chat);
+    }
+
+    public boolean canForwardMessageAndSaveAsMedia(int currentAccount, TLRPC.Message message, TLRPC.Chat chat) {
+        if (message == null || message.peer_id == null) {
+            return false;
+        }
+        if (chat == null && message.peer_id.channel_id != 0) {
+            chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat(message.peer_id.channel_id);
+            if (chat == null) {
+                return false;
+            }
+        }
+        return !(message instanceof TLRPC.TL_message_secret) && !needDrawBluredPreview() && !isLiveLocation() && type != 16 && !isSponsored() && (chat == null || !chat.noforwards);
     }
 
     public boolean canEditMedia() {

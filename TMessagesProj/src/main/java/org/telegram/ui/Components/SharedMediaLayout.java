@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -436,6 +437,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private boolean photoVideoChangeColumnsAnimation;
     private ArrayList<SharedPhotoVideoCell2> animationSupportingSortedCells = new ArrayList<>();
     private int animateToColumnsCount;
+
+    private HintView forwardHintTextView;
 
     private static final Interpolator interpolator = t -> {
         --t;
@@ -1432,6 +1435,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             actionModeLayout.addView(forwardItem, new LinearLayout.LayoutParams(AndroidUtilities.dp(54), ViewGroup.LayoutParams.MATCH_PARENT));
             actionModeViews.add(forwardItem);
             forwardItem.setOnClickListener(v -> onActionBarItemClick(forward));
+
+            if (DialogObject.isChatDialog(dialog_id)) {
+                TLRPC.Chat currentChat = profileActivity.getMessagesController().getChat(-dialog_id);
+                if (currentChat != null && currentChat.noforwards) {
+                    forwardItem.setEnabled(false);
+                    forwardItem.setAlpha(0.5f);
+                }
+            }
         }
         deleteItem = new ActionBarMenuItem(context, null, Theme.getColor(Theme.key_actionBarActionModeDefaultSelector), Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), false);
         deleteItem.setIcon(R.drawable.msg_delete);
@@ -4450,6 +4461,12 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         }
         if (!isActionModeShowed) {
             showActionMode(true);
+            if (DialogObject.isChatDialog(dialog_id)) {
+                TLRPC.Chat currentChat = profileActivity.getMessagesController().getChat(-dialog_id);
+                if (currentChat != null && currentChat.noforwards) {
+                    showForwardHint(ChatObject.isChannelOrGiga(currentChat));
+                }
+            }
         }
         return true;
     }
@@ -4572,6 +4589,18 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 }
             }
         }
+    }
+
+    private void showForwardHint(boolean isChannel) {
+        if (forwardItem.isEnabled() || actionModeLayout == null || !isActionModeShowed) {
+            return;
+        }
+        if (forwardHintTextView == null) {
+            forwardHintTextView = new HintView(getContext(), 9, true);
+            addView(forwardHintTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 10, 0, 10, 0));
+        }
+        forwardHintTextView.setText(isChannel ? LocaleController.getString("ChannelForwardRestrictedHint", R.string.ChannelForwardRestrictedHint) : LocaleController.getString("MegaForwardRestrictedHint", R.string.MegaForwardRestrictedHint));
+        forwardHintTextView.showForView(forwardItem, true);
     }
 
     private void openUrl(String link) {
